@@ -1,0 +1,106 @@
+x-app-common: &app-common
+  build: .
+  env_file: .env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+  networks:
+    - wex-network
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: wex-postgres
+    environment:
+      POSTGRES_DB: wex_transactions
+      POSTGRES_USER: wex
+      POSTGRES_PASSWORD: wex_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wex -d wex_transactions"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wex-network
+
+  redis:
+    image: redis:7
+    container_name: wex-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wex-network
+
+  app-1:
+    <<: *app-common
+    container_name: wex-app-1
+
+  app-2:
+    <<: *app-common
+    container_name: wex-app-2
+
+  nginx:
+    image: nginx:1.28
+    container_name: wex-nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app-1:
+        condition: service_healthy
+      app-2:
+        condition: service_healthy
+    networks:
+      - wex-network
+
+  prometheus:
+    image: prom/prometheus:v3.11
+    container_name: wex-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      app-1:
+        condition: service_healthy
+      app-2:
+        condition: service_healthy
+    networks:
+      - wex-network
+
+  grafana:
+    image: grafana/grafana:12.4.0
+    container_name: wex-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - wex-network
+
+networks:
+  wex-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

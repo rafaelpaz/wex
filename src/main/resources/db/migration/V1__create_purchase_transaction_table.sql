@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS purchase_transaction (
+    id BIGINT PRIMARY KEY,
+    description VARCHAR(50) NOT NULL,
+    transaction_date DATE NOT NULL,
+    purchase_amount DECIMAL(19,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,53 @@
+# Build outputs
+target/
+build/
+out/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+compose.yml
+docker/
+
+# Data
+data/
+
+# Docs
+*.md
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.*
+
+# Test results
+test-output/
+surefire-reports/
+.jqwik-database
+
+# Kiro
+.kiro/
+
+# Misc
+README.md

@@ -1,0 +1,146 @@
+# =============================================================================
+# Default Configuration (no profile / local mode)
+# =============================================================================
+# This file provides the self-contained "clone and run" configuration.
+# Running without a Spring profile uses H2 embedded database + Caffeine cache,
+# requiring no external services (no Docker, PostgreSQL, or Redis needed).
+#
+# Profile strategy:
+#   - No profile (default): H2 + Caffeine — local development / assessment review
+#   - "docker" profile:     PostgreSQL + Redis — configured via environment variables in .env
+# =============================================================================
+
+spring:
+  application:
+    name: wex-purchase-transactions
+
+  # H2 Embedded Database (file-based for persistence across restarts)
+  # Overridden by PostgreSQL — configured via environment variables in .env
+  datasource:
+    url: jdbc:h2:file:./data/wex-transactions;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Flyway Database Migrations
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+
+  # Virtual Threads
+  threads:
+    virtual:
+      enabled: true
+
+  # Caffeine Cache (local default — overridden by Redis via environment variables in .env)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=3600s
+
+# Resilience4j Circuit Breaker
+resilience4j:
+  circuitbreaker:
+    instances:
+      treasuryApi:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 3
+        register-health-indicator: true
+
+# Currency Validation Feature Flag
+features:
+  currency-validation:
+    enabled: false
+    valid-currencies:
+      # Americas
+      - "Canada-Dollar"
+      - "Brazil-Real"
+      - "Mexico-Peso"
+      - "Argentina-Peso"
+      - "Colombia-Peso"
+      - "Chile-Peso"
+      # Europe
+      - "Euro Zone-Euro"
+      - "United Kingdom-Pound"
+      - "Switzerland-Franc"
+      - "Sweden-Krona"
+      - "Norway-Krone"
+      - "Denmark-Krone"
+      - "Poland-Zloty"
+      - "Czech Republic-Koruna"
+      # Asia-Pacific
+      - "Japan-Yen"
+      - "China-Renminbi"
+      - "India-Rupee"
+      - "Australia-Dollar"
+      - "New Zealand-Dollar"
+      - "Korea-Won"
+      - "Singapore-Dollar"
+      - "Hong Kong-Dollar"
+      - "Taiwan-Dollar"
+      - "Thailand-Baht"
+      - "Malaysia-Ringgit"
+      - "Indonesia-Rupiah"
+      - "Philippines-Peso"
+      # Middle East & Africa
+      - "United Arab Emirates-Dirham"
+      - "Saudi Arabia-Riyal"
+      - "Israel-Shekel"
+      - "South Africa-Rand"
+      - "Turkey-New Lira"
+      - "Nigeria-Naira"
+      - "Egypt-Pound"
+
+# Treasury API Configuration
+treasury:
+  api:
+    base-url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange
+    connect-timeout: 5s
+    read-timeout: 10s
+
+# Actuator
+management:
+  endpoint:
+    health:
+      show-details: never
+  health:
+    redis:
+      enabled: false
+    circuitbreakers:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+# OpenAPI / Swagger
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.wex.purchasetransactions: DEBUG
+    org.springframework.web: INFO
+    org.flywaydb: INFO
+    # SQL Logging (uncomment to activate)
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.orm.jdbc.bind: TRACE
