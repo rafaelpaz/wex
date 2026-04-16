@@ -52,6 +52,10 @@ docker compose up --build
 | Swagger UI | http://localhost:8080/swagger-ui/index.html | — |
 | Grafana Dashboard | http://localhost:3000/d/wex-app-dashboard/wex-purchase-transactions?orgId=1&from=now-30m&to=now&timezone=browser&refresh=10s | `admin` / `admin` |
 
+### Grafana Dashboard
+
+![Grafana Dashboard](docs/dashboard.png)
+
 ### 4. Stop the stack
 
 ```bash
@@ -326,6 +330,49 @@ The test suite combines three approaches:
 - **Unit tests** (JUnit 5) — Focused tests for the controller, service, exception handler, currency converter, and configuration binding.
 - **Integration tests** (Spring Boot Test + WireMock) — End-to-end flows against the full application context with the Treasury API mocked via WireMock.
 
+## CI/CD Pipeline
+
+The project includes GitHub Actions workflows for continuous integration and release management.
+
+### CI Workflow (`ci.yml`)
+
+Triggers on every push to `main` and every pull request. Two jobs:
+
+**Build & Test** — compiles, runs all tests, and enforces quality gates:
+- JaCoCo code coverage (minimum 70% line coverage)
+- SpotBugs static analysis
+- Checkstyle (Google style)
+- OWASP Dependency-Check (CVSS ≥ 7 fails the build, via `-Pci` profile)
+- Uploads JAR, surefire reports, and failsafe reports as artifacts
+
+**Docker Build** — downloads the pre-built JAR (no recompilation), builds a runtime-only image via `Dockerfile.ci`, and scans it with Trivy for CRITICAL/HIGH vulnerabilities. On `main`, it demonstrates GHCR login and image tagging patterns (`push: false`).
+
+All GitHub Actions are SHA-pinned for supply-chain security.
+
+### Dependabot
+
+Monitors Maven dependencies and GitHub Actions for weekly updates.
+
+### Running Quality Checks Locally
+
+```bash
+# Fast local build (skips OWASP scan)
+./mvnw verify -B
+
+# Full CI build (includes OWASP dependency scan)
+./mvnw verify -B -Pci
+
+# Build and scan Docker image locally
+docker build -f Dockerfile.ci -t wex-local:test .
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/aquasecurity/trivy:latest image --severity CRITICAL,HIGH wex-local:test
+```
+
+### GitHub Secrets
+
+| Secret | Purpose |
+|--------|---------|
+| `NVD_API_KEY` | OWASP Dependency-Check NVD API key ([request here](https://nvd.nist.gov/developers/request-an-api-key)) |
+
 ## Production Considerations
 
 This project is scoped as a technical assessment. In a production deployment, the following concerns would be addressed at the infrastructure and platform level:
@@ -354,4 +401,7 @@ This project is scoped as a technical assessment. In a production deployment, th
 | Load Balancer | NGINX |
 | API Docs | springdoc-openapi (Swagger UI) |
 | Testing | JUnit 5, jqwik, WireMock |
+| CI/CD | GitHub Actions, Dependabot |
+| Security Scanning | OWASP Dependency-Check, Trivy |
+| Code Quality | JaCoCo, SpotBugs, Checkstyle |
 | Build | Maven (wrapper included) |
