@@ -72,7 +72,7 @@ services:
       - wex-network
 
   prometheus:
-    image: prom/prometheus:v3.11
+    image: prom/prometheus:v3.11.2-distroless
     container_name: wex-prometheus
     ports:
       - "9090:9090"
